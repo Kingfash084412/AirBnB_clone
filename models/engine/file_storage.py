@@ -1,97 +1,77 @@
-#!/usr/bin/python3
-"""Module for FileStorage class."""
-import datetime
+#!usr/bin/python3
+""" My file storage module """
 import json
 import os
+from pathlib import Path
+
+BASE_DIR = Path(os.getcwd()).resolve()
 
 
 class FileStorage:
-
-    """Class for serializtion and deserialization of base classes."""
-    __file_path = "file.json"
+    """ The file storage class """
+    __file_path = str(BASE_DIR / "file.json")
     __objects = {}
 
+    def __init__(self):
+        """Initialization method"""
+        pass
+
     def all(self):
-        """Returns __objects dictionary."""
-        # TODO: should this be a copy()?
+        """ Returns all of the objects"""
         return FileStorage.__objects
 
     def new(self, obj):
-        """Sets new obj in __objects dictionary."""
-        # TODO: should these be more precise specifiers?
-        key = "{}.{}".format(type(obj).__name__, obj.id)
+        """ Sets a new object to the object dict """
+        key = "{}.{}".format(obj.__class__.__name__, obj.id)
         FileStorage.__objects[key] = obj
 
     def save(self):
-        """Serialzes __objects to JSON file."""
-        with open(FileStorage.__file_path, "w", encoding="utf-8") as f:
-            d = {k: v.to_dict() for k, v in FileStorage.__objects.items()}
-            json.dump(d, f)
+        """ serializes __objects to the JSON file (path: __file_path) """
+        save_dict = {}
+        if FileStorage.__objects:
+            for key, value in FileStorage.__objects.items():
+                save_dict[key] = value.to_dict()
 
-    def classes(self):
-        """Returns a dictionary of valid classes and their references."""
-        from models.base_model import BaseModel
-        from models.user import User
-        from models.state import State
-        from models.city import City
-        from models.amenity import Amenity
-        from models.place import Place
-        from models.review import Review
-
-        classes = {"BaseModel": BaseModel,
-                   "User": User,
-                   "State": State,
-                   "City": City,
-                   "Amenity": Amenity,
-                   "Place": Place,
-                   "Review": Review}
-        return classes
+            with open(FileStorage.__file_path, "w") as f:
+                json.dump(save_dict, f)
+        else:
+            with open(FileStorage.__file_path, "w") as f:
+                json.dump({}, f)
 
     def reload(self):
-        """Deserializes JSON file into __objects."""
-        if not os.path.isfile(FileStorage.__file_path):
-            return
-        with open(FileStorage.__file_path, "r", encoding="utf-8") as f:
-            obj_dict = json.load(f)
-            obj_dict = {k: self.classes()[v["__class__"]](**v)
-                        for k, v in obj_dict.items()}
-            # TODO: should this overwrite or insert?
-            FileStorage.__objects = obj_dict
+        """
+        deserializes the JSON file to __objects
+        (only if the JSON file (__file_path) exists;
+        otherwise, do nothing.
+        """
+        if Path(FileStorage.__file_path).exists():
+            with open(FileStorage.__file_path, "r") as r:
+                try:
+                    reload_dict = json.load(r)
+                except:
+                    reload_dict = None
 
-    def attributes(self):
-        """Returns the valid attributes and their types for classname."""
-        attributes = {
-            "BaseModel":
-                     {"id": str,
-                      "created_at": datetime.datetime,
-                      "updated_at": datetime.datetime},
-            "User":
-                     {"email": str,
-                      "password": str,
-                      "first_name": str,
-                      "last_name": str},
-            "State":
-                     {"name": str},
-            "City":
-                     {"state_id": str,
-                      "name": str},
-            "Amenity":
-                     {"name": str},
-            "Place":
-                     {"city_id": str,
-                      "user_id": str,
-                      "name": str,
-                      "description": str,
-                      "number_rooms": int,
-                      "number_bathrooms": int,
-                      "max_guest": int,
-                      "price_by_night": int,
-                      "latitude": float,
-                      "longitude": float,
-                      "amenity_ids": list},
-            "Review":
-            {"place_id": str,
-                         "user_id": str,
-                         "text": str}
-        }
-        return attributes
+                if reload_dict:
+                    from models.base_model import BaseModel
+                    from models.user import User
+                    from models.state import State
+                    from models.city import City
+                    from models.place import Place
+                    from models.review import Review
+                    from models.amenity import Amenity
+                    FileStorage.__objects = {}
+                    for key, value in reload_dict.items():
+                        if key.startswith("BaseModel"):
+                            FileStorage.__objects[key] = BaseModel(**value)
+                        if key.startswith("User"):
+                            FileStorage.__objects[key] = User(**value)
+                        if key.startswith("State"):
+                            FileStorage.__objects[key] = State(**value)
+                        if key.startswith("City"):
+                            FileStorage.__objects[key] = City(**value)
+                        if key.startswith("Place"):
+                            FileStorage.__objects[key] = Place(**value)
+                        if key.startswith("Review"):
+                            FileStorage.__objects[key] = Review(**value)
+                        if key.startswith("Amenity"):
+                            FileStorage.__objects[key] = Amenity(**value)
