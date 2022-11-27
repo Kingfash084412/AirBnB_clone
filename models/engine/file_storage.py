@@ -1,97 +1,73 @@
 #!/usr/bin/python3
-"""Module for FileStorage class."""
-import datetime
+""" The json file storage """
 import json
-import os
+from models.base_model import BaseModel
+from models.user import User
+from models.state import State
+from models.city import City
+from models.place import Place
+from models.review import Review
+from models.amenity import Amenity
 
 
-class FileStorage:
+class FileStorage():
+    """ Create a file storage
+    - serialize to JSON file and deserialize
+    JSON file to instances
 
-    """Class for serializtion and deserialization of base classes."""
+    Args:
+        class attributtes:
+            __file_path: string json ti file (file.json)
+            __objects: empty dictionary
+        class methods:
+            all: All in the dictionary
+            new: Create a new key
+            save: serializes __objects to JSON path
+            reload: deserializes JSON file to instances
+    """
+
     __file_path = "file.json"
     __objects = {}
+    class_dict = {"BaseModel": BaseModel,
+                  "User": User,
+                  "State": State,
+                  "City": City,
+                  "Place": Place,
+                  "Amenity": Amenity,
+                  "Review": Review}
 
     def all(self):
-        """Returns __objects dictionary."""
-        # TODO: should this be a copy()?
-        return FileStorage.__objects
+        """ return the dictionary objects """
+        return (self.__objects)
 
     def new(self, obj):
-        """Sets new obj in __objects dictionary."""
-        # TODO: should these be more precise specifiers?
-        key = "{}.{}".format(type(obj).__name__, obj.id)
-        FileStorage.__objects[key] = obj
+        """ set in __objects the obj with key id """
+        if obj:
+            key = "{}.{}".format(obj.__class__.__name__, obj.id)
+            self.__objects[key] = obj
 
     def save(self):
-        """Serialzes __objects to JSON file."""
-        with open(FileStorage.__file_path, "w", encoding="utf-8") as f:
-            d = {k: v.to_dict() for k, v in FileStorage.__objects.items()}
-            json.dump(d, f)
+        """ Serialize __objects to the JSON file
+        path: __file_path
+        """
 
-    def classes(self):
-        """Returns a dictionary of valid classes and their references."""
-        from models.base_model import BaseModel
-        from models.user import User
-        from models.state import State
-        from models.city import City
-        from models.amenity import Amenity
-        from models.place import Place
-        from models.review import Review
+        obj_dict = {}
 
-        classes = {"BaseModel": BaseModel,
-                   "User": User,
-                   "State": State,
-                   "City": City,
-                   "Amenity": Amenity,
-                   "Place": Place,
-                   "Review": Review}
-        return classes
+        for key, obj in self.__objects.items():
+            obj_dict[key] = obj.to_dict()
+        with open(self.__file_path, 'w', encoding='utf-8') as f:
+            json.dump(obj_dict, f)
 
     def reload(self):
-        """Deserializes JSON file into __objects."""
-        if not os.path.isfile(FileStorage.__file_path):
-            return
-        with open(FileStorage.__file_path, "r", encoding="utf-8") as f:
-            obj_dict = json.load(f)
-            obj_dict = {k: self.classes()[v["__class__"]](**v)
-                        for k, v in obj_dict.items()}
-            # TODO: should this overwrite or insert?
-            FileStorage.__objects = obj_dict
+        """ Deserializes the JSON file to __objects
+            if the file doesn't exist: show no errors
+        """
+        try:
+            with open(self.__file_path, 'r', encoding='utf-8') as f:
+                new_obj_dict = json.load(f)
+            for key, value in new_obj_dict.items():
+                obj = self.class_dict[value['__class__']](**value)
+                self.__objects[key] = obj
+        except FileNotFoundError:
+            pass
 
-    def attributes(self):
-        """Returns the valid attributes and their types for classname."""
-        attributes = {
-            "BaseModel":
-                     {"id": str,
-                      "created_at": datetime.datetime,
-                      "updated_at": datetime.datetime},
-            "User":
-                     {"email": str,
-                      "password": str,
-                      "first_name": str,
-                      "last_name": str},
-            "State":
-                     {"name": str},
-            "City":
-                     {"state_id": str,
-                      "name": str},
-            "Amenity":
-                     {"name": str},
-            "Place":
-                     {"city_id": str,
-                      "user_id": str,
-                      "name": str,
-                      "description": str,
-                      "number_rooms": int,
-                      "number_bathrooms": int,
-                      "max_guest": int,
-                      "price_by_night": int,
-                      "latitude": float,
-                      "longitude": float,
-                      "amenity_ids": list},
-            "Review":
-            {"place_id": str,
-                         "user_id": str,
-                         "text": str}
-        }
-        return attributes
